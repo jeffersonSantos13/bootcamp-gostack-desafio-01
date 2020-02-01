@@ -6,6 +6,13 @@ app.use(express.json());
 const projects = [];
 
 //Middlewares
+app.use((req, res, next) => {
+  console.count("Quantidade de requisições realizadas");
+
+  return next();
+})
+
+// Verifica se o ID do projeto informado existe
 function checkIdExists(req, res, next) {
   const { id } = req.params;
 
@@ -20,13 +27,6 @@ function checkIdExists(req, res, next) {
   return next();
 }
 
-app.use((req, res, next) => {
-  console.count("Quantidade de requisições realizadas");
-
-  return next();
-})
-
-// Middleware: Opcional
 // Verifica se o 'title' foi informado no corpo da requisição
 function checkTitleExists(req, res, next) {
   const { title } = req.body;
@@ -40,6 +40,17 @@ function checkTitleExists(req, res, next) {
   return next();
 }
 
+// Verifica se o ID do projeto já existe
+function validIdProjects(req, res, next){
+	const { id } = req.body;
+
+	if(projects.find(element => element.id === id)) {
+		return res.status(400).json({error: "Produto informado já existe."})
+	}
+
+	return next();
+}
+
 // ROTAS
 
 // Listando todos os projetos e as tarefas
@@ -47,11 +58,15 @@ app.get('/projects', (req, res) => {
 	return res.json(projects);
 });
 
-// Criando um novo projeto e suas tarefas
-app.post('/projects', (req, res) => {
-	const project = req.body;
+// Criando um novo projeto
+app.post('/projects', validIdProjects, (req, res) => {
+	const { id, title } = req.body;
 
-	projects.push(project)
+	projects.push({
+		id,
+		title,
+		tasks:[]
+	})
 
 	return res.status(200).json(projects);
 });
@@ -59,8 +74,9 @@ app.post('/projects', (req, res) => {
 // Altera o título do projeto
 app.put('/projects/:id', checkIdExists, checkTitleExists, (req, res) => {
   const { index, title } = req;
-  
-	projects[index].title = title;
+  const project = projects[index];
+	
+	project.title = title;
 
 	return res.status(200).json(project);
 });
